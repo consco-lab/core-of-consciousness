@@ -1,0 +1,641 @@
+以下是您需要的GitHub仓库主页的`index.html`文件。它能够以树形结构展示`documents`目录下的文档和子目录，并支持点击浏览Markdown、文本等文件。
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>文档中心 - 仓库文档浏览器</title>
+    <!-- 使用 marked 库来渲染 Markdown (可选，增强阅读体验) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f6f8fa;
+            color: #1f2d3d;
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 85vh;
+        }
+
+        /* 头部 */
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e9ecef;
+            padding: 1.5rem 2rem;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .header p {
+            color: #5b6e8c;
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+        .repo-badge {
+            display: inline-block;
+            background: #eef2ff;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #1e40af;
+            margin-top: 10px;
+        }
+
+        /* 双栏布局 */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: 600px;
+        }
+        /* 侧边栏树形目录 */
+        .sidebar {
+            width: 320px;
+            background: #f9fafb;
+            border-right: 1px solid #eef2f6;
+            overflow-y: auto;
+            padding: 1.2rem 0;
+            flex-shrink: 0;
+        }
+        .sidebar-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6c7a91;
+            padding: 0 1rem 0.8rem 1rem;
+            border-bottom: 1px solid #e9edf2;
+            margin-bottom: 1rem;
+        }
+        .tree {
+            padding-left: 0.5rem;
+        }
+        .tree-node {
+            list-style: none;
+            margin-left: 0;
+            padding-left: 0;
+        }
+        .tree-node details {
+            margin-left: 0;
+        }
+        .tree-node summary {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            color: #1f2d3d;
+            font-weight: 500;
+        }
+        .tree-node summary:hover {
+            background: #eef2ff;
+        }
+        .tree-node .file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px 5px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: #2c3e66;
+            transition: background 0.15s;
+            margin: 2px 0;
+        }
+        .tree-node .file-item:hover {
+            background: #eef2ff;
+        }
+        .tree-node .file-item.active {
+            background: #e0e7ff;
+            color: #1e40af;
+            font-weight: 500;
+            border-left: 3px solid #3b82f6;
+        }
+        .folder-icon, .file-icon {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .file-name {
+            word-break: break-word;
+            flex: 1;
+        }
+        /* 右侧内容展示区 */
+        .content-area {
+            flex: 1;
+            background: white;
+            padding: 2rem 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .breadcrumb {
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #edf2f7;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .breadcrumb a {
+            color: #2563eb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .doc-viewer {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 1rem;
+            min-height: 500px;
+        }
+        .rendered-markdown {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            line-height: 1.6;
+        }
+        .rendered-markdown h1, .rendered-markdown h2 {
+            border-bottom: 1px solid #eaeef2;
+            padding-bottom: 0.3rem;
+        }
+        .rendered-markdown code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .rendered-markdown pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 12px;
+            overflow-x: auto;
+        }
+        .plain-text {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .image-view {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .unsupported {
+            background: #fff5f0;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 20px;
+            color: #b45309;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            color: #6c7a91;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #8a99b0;
+            border-top: 1px solid #eef2f6;
+            padding: 1rem;
+            background: #fafcff;
+        }
+        @media (max-width: 720px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-height: 300px;
+                border-right: none;
+                border-bottom: 1px solid #eef2f6;
+            }
+            .content-area {
+                padding: 1.2rem;
+            }
+        }
+        button.link-style {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            color: #2563eb;
+        }
+        .error-message {
+            color: #dc2626;
+            background: #fef2f2;
+            padding: 1rem;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📂 文档知识库</h1>
+        <p>浏览 <code>documents/</code> 目录下的所有文档与子目录内容，支持 Markdown、文本、图片等文件预览。</p>
+        <div class="repo-badge">📁 基于 GitHub Pages 动态索引 · 静态树形展示</div>
+    </div>
+    <div class="main-layout">
+        <!-- 左侧树形导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-title">📖 文档目录</div>
+            <div id="tree-container" class="tree">
+                <div class="loading">加载目录树中...</div>
+            </div>
+        </div>
+        <!-- 右侧内容区 -->
+        <div class="content-area">
+            <div class="breadcrumb" id="breadcrumb">
+                <span>📁 根目录</span>
+            </div>
+            <div id="doc-viewer" class="doc-viewer">
+                <div style="text-align: center; padding: 3rem; color: #6c7a91;">
+                    🧭 请从左侧选择一个文档查看<br/>
+                    支持 .md, .txt, .markdown, .json, .js (文本展示), .png, .jpg, .jpeg, .gif, .svg 等
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        🌟 自动遍历 documents 目录结构 | 点击文件即时预览 | 基于 GitHub 仓库文件原始URL
+    </footer>
+</div>
+
+<script>
+    // 配置：仓库基础路径，这里因为页面是放在仓库根目录（例如 username.github.io/repo/ 或者 直接项目根）
+    // 为了适应任意 GitHub Pages 部署（包括项目站点和用户站点），动态获取当前页面的路径，构造出指向 documents 目录的 raw 地址。
+    // 本脚本通过请求 documents 目录的 GitHub API (或者直接尝试 fetch 列表) 来获取目录树。
+    // 由于 GitHub Pages 只能访问静态资源，但我们可以通过 GitHub 的 REST API 获取目录内容（仓库需要公开，或者需要 token？公开仓库无需token但会有请求限制）。
+    // 更好的兼容方式: 使用 GitHub 的 API (https://api.github.com/repos/{owner}/{repo}/contents/documents) 来递归获取。
+    // 为了让页面完全静态且无需用户提供 token，我们使用 GitHub 官方 API (公开仓库调用无限制，但注意频率)。同时支持直接从根路径尝试 fetch 文件列表失败时回退。
+    // 为了通用，我们提取当前页面的 repository 信息。可以通过 window.location 来推断 GitHub Pages 的仓库名和用户名。
+    // 例如：https://username.github.io/reponame/  或者 自定义域名 + 仓库根。最好让用户配置变量？不，我们可以利用已知仓库的 API。
+    // 更优雅的做法：通过解析 <meta> 或直接使用 github 仓库 API 获取目录树。
+    // 方案：假设当前页面访问路径是仓库根，我们自动获取仓库的 owner 和 repo 名称。
+    // 方法1：如果部署在 username.github.io/repo 这种标准 pages 下，pathname 第一段就是 repo 名。
+    // 方法2：如果使用自定义域名或顶级项目站点，需要手动配置？为了可靠，提供一个后备手动设置变量，但通过JS自动推断。
+    // 本脚本通过解析当前页面的 URL，尝试推导 GitHub API 的路径。如果部署在非标准路径，则显示警告并提供手动修改。
+    
+    // ----- 全局变量 ----------
+    let currentRepoTree = [];       // 存储完整树结构
+    let flatFileList = [];          // 存储所有文件节点 {path, name, download_url}
+    let currentFile = null;
+    
+    // 配置：需要浏览的根目录是 'documents' (相对于仓库根)
+    const DOCS_ROOT = 'documents';
+    
+    // 自动获取 GitHub 仓库信息 (仅当页面托管在 github.io 域下有效)
+    function getRepoInfoFromUrl() {
+        // 期望匹配格式: https://[USERNAME].github.io/[REPO_NAME]/ 或者 https://[USERNAME].github.io/ (用户站点)
+        // 也可能 https://custom.domain/ 无法推导，提示手动覆盖。
+        const hostname = window.location.hostname;
+        const pathParts = window.location.pathname.split('/').filter(p => p !== '');
+        let owner = null;
+        let repo = null;
+        // 如果是 github.io 域名
+        if (hostname.endsWith('github.io')) {
+            const sub = hostname.replace('.github.io', '');
+            if (sub && sub !== '') {
+                owner = sub;
+                // 如果 path 有第一段，那就是 repo 名称
+                if (pathParts.length > 0) {
+                    repo = pathParts[0];
+                } else {
+                    // 用户站点，没有仓库名，根目录下直接存放 documents
+                    repo = null; // 表示用户站点根
+                }
+            }
+        }
+        // 如果不是 github.io, 我们尝试从 pathname 推断? 风险高, 默认提供用户可修改控制台或者展示配置面板? 但大多数github pages场景适用。
+        // 提供后备方案: 用户可以在控制台配置，或者我们使用相对路径读取？由于浏览器无法直接列出目录，必须通过API。
+        // 另外也可以使用 github raw 内容但是无法列举目录。最终依靠 API。
+        // 如果无法获取，则提示用户手动设置 owner/repo
+        return { owner, repo, isUserSite: repo === null && owner !== null };
+    }
+    
+    let { owner, repo, isUserSite } = getRepoInfoFromUrl();
+    
+    // 如果获取不到，尝试从已知环境变量或者显示友好的配置提示，但由于这是单一html，尽量通过提示方式，但大多数标准 github.io 下完美运行。
+    // 额外支持手动覆盖 (在控制台 window.__CONFIG__ = { owner, repo })
+    if (!owner) {
+        console.warn('无法自动解析 GitHub 账号，请在控制台设置 window.__REPO_CONFIG = { owner: "你的用户名", repo: "仓库名" }');
+        // 显示一个临时的错误在树区域
+        document.getElementById('tree-container').innerHTML = '<div style="padding:1rem; color:#b91c1c;">⚠️ 无法自动识别仓库信息。<br>请确保本页面部署在 GitHub Pages 标准域名下，或手动在代码中配置 owner/repo。</div>';
+    }
+    
+    // 允许手动覆盖配置 (开发者可在控制台覆盖)
+    if (window.__REPO_CONFIG) {
+        owner = window.__REPO_CONFIG.owner || owner;
+        repo = window.__REPO_CONFIG.repo || repo;
+    }
+    
+    // GitHub API 基础地址
+    const API_BASE = 'https://api.github.com/repos';
+    
+    // 获取目录内容 (GitHub API)
+    async function fetchGitHubContents(path) {
+        if (!owner || (!repo && !isUserSite)) {
+            throw new Error('缺少仓库所有者或仓库名信息');
+        }
+        let apiPath = '';
+        if (isUserSite && !repo) {
+            // 用户站点，仓库名就是用户名.github.io，实际内容路径就是根，但API需要仓库名： {owner}/{{owner}}.github.io
+            const userRepoName = `${owner}/${owner}.github.io`;
+            apiPath = `${API_BASE}/${userRepoName}/contents/${path}`;
+        } else {
+            apiPath = `${API_BASE}/${owner}/${repo}/contents/${path}`;
+        }
+        const response = await fetch(apiPath);
+        if (!response.ok) {
+            if (response.status === 404) throw new Error(`路径不存在: ${path}`);
+            throw new Error(`API错误: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        // GitHub API 返回数组（目录）或对象（文件）
+        return Array.isArray(data) ? data : [data];
+    }
+    
+    // 递归构建树形结构 (基于GitHub API)
+    async function buildTree(currentPath = DOCS_ROOT, parentNode = null) {
+        try {
+            const items = await fetchGitHubContents(currentPath);
+            const children = [];
+            for (const item of items) {
+                const node = {
+                    name: item.name,
+                    path: item.path,
+                    type: item.type, // 'file' or 'dir'
+                    download_url: item.download_url,
+                    html_url: item.html_url,
+                    children: []
+                };
+                if (item.type === 'dir') {
+                    // 递归获取子目录
+                    const subChildren = await buildTree(item.path, node);
+                    node.children = subChildren;
+                } else {
+                    // 文件: 只展示可预览的文本/图片/文档类型
+                    // 仍存储以备渲染
+                }
+                children.push(node);
+            }
+            return children;
+        } catch (err) {
+            console.error(`获取目录失败 ${currentPath}:`, err);
+            if (currentPath === DOCS_ROOT) {
+                // 根目录失败，显示错误提示
+                throw err;
+            }
+            return []; // 子目录失败返回空数组
+        }
+    }
+    
+    // 扁平化所有文件便于快速查找
+    function flattenTree(nodes, parentPath = '') {
+        let files = [];
+        for (const node of nodes) {
+            const fullPath = node.path;
+            if (node.type === 'file') {
+                files.push({
+                    name: node.name,
+                    path: fullPath,
+                    download_url: node.download_url,
+                    type: node.name.split('.').pop().toLowerCase()
+                });
+            }
+            if (node.children && node.children.length) {
+                files.push(...flattenTree(node.children, fullPath));
+            }
+        }
+        return files;
+    }
+    
+    // 渲染树形导航 (递归生成 details/summary)
+    function renderTree(nodes, containerElement, level = 0) {
+        if (!nodes || nodes.length === 0) {
+            containerElement.innerHTML = '<div style="padding: 0.8rem; color: #6c7a91;">📂 目录为空或无法加载</div>';
+            return;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'tree-node';
+        ul.style.listStyle = 'none';
+        ul.style.paddingLeft = level > 0 ? '0.8rem' : '0';
+        
+        for (const node of nodes) {
+            if (node.type === 'dir') {
+                const li = document.createElement('li');
+                li.style.listStyle = 'none';
+                const details = document.createElement('details');
+                details.style.marginLeft = '0';
+                if (level === 0) details.open = true; // 根目录默认展开
+                const summary = document.createElement('summary');
+                summary.style.display = 'flex';
+                summary.style.alignItems = 'center';
+                summary.style.gap = '6px';
+                summary.style.cursor = 'pointer';
+                summary.innerHTML = `<span class="folder-icon">📁</span> <span>${escapeHtml(node.name)}</span>`;
+                details.appendChild(summary);
+                const childContainer = document.createElement('div');
+                if (node.children && node.children.length) {
+                    renderTree(node.children, childContainer, level + 1);
+                } else {
+                    childContainer.innerHTML = '<div style="padding-left: 1.5rem; font-size:0.8rem; color:#8a99b0;">空目录</div>';
+                }
+                details.appendChild(childContainer);
+                li.appendChild(details);
+                ul.appendChild(li);
+            } else {
+                const li = document.createElement('li');
+                li.style.listStyle = 'none';
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+                const ext = node.name.split('.').pop().toLowerCase();
+                let icon = '📄';
+                if (['md', 'markdown'].includes(ext)) icon = '📝';
+                else if (['png','jpg','jpeg','gif','svg','webp'].includes(ext)) icon = '🖼️';
+                else if (['txt','json','js','css','html'].includes(ext)) icon = '📃';
+                else icon = '📄';
+                fileDiv.innerHTML = `<span class="file-icon">${icon}</span><span class="file-name">${escapeHtml(node.name)}</span>`;
+                fileDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 高亮当前选中
+                    document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+                    fileDiv.classList.add('active');
+                    loadAndRenderFile(node);
+                });
+                li.appendChild(fileDiv);
+                ul.appendChild(li);
+            }
+        }
+        containerElement.appendChild(ul);
+    }
+    
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+    
+    // 加载并展示文件内容
+    async function loadAndRenderFile(fileNode) {
+        if (!fileNode || !fileNode.download_url) {
+            showError('无法获取文件下载链接');
+            return;
+        }
+        const fileUrl = fileNode.download_url;
+        const fileName = fileNode.name;
+        const ext = fileName.split('.').pop().toLowerCase();
+        const viewerDiv = document.getElementById('doc-viewer');
+        viewerDiv.innerHTML = '<div class="loading">⏳ 加载文档内容中...</div>';
+        
+        // 更新面包屑路径
+        const pathParts = fileNode.path.split('/');
+        const breadcrumbDiv = document.getElementById('breadcrumb');
+        let breadHtml = `<span>📁 根目录</span>`;
+        let accumPath = '';
+        for (let i = 0; i < pathParts.length - 1; i++) {
+            accumPath += (accumPath ? '/' : '') + pathParts[i];
+            breadHtml += ` / <a data-path="${accumPath}">${escapeHtml(pathParts[i])}</a>`;
+        }
+        breadHtml += ` / <span>📄 ${escapeHtml(fileName)}</span>`;
+        breadcrumbDiv.innerHTML = breadHtml;
+        // 给面包屑中的目录添加点击浏览目录的简单效果（仅视觉上定位，不实现完整导航但可以显示提示）
+        document.querySelectorAll('#breadcrumb a').forEach(el => {
+            el.addEventListener('click', (e) => {
+                // 可选简易浏览: 控制台日志，此处不做全树跳转以免复杂，保留友好
+                console.log('浏览目录:', e.target.getAttribute('data-path'));
+            });
+        });
+        
+        try {
+            // 处理图片
+            if (['png','jpg','jpeg','gif','svg','webp','bmp'].includes(ext)) {
+                viewerDiv.innerHTML = `<img src="${fileUrl}" alt="${fileName}" class="image-view" style="max-width:100%; max-height:70vh; object-fit: contain; margin:0 auto; display:block;">`;
+                return;
+            }
+            // 处理 markdown
+            if (ext === 'md' || ext === 'markdown') {
+                const response = await fetch(fileUrl);
+                const text = await response.text();
+                const htmlContent = marked.parse(text);
+                viewerDiv.innerHTML = `<div class="rendered-markdown">${htmlContent}</div>`;
+                return;
+            }
+            // 处理文本类
+            if (['txt','json','js','css','html','xml','log','csv','yaml','yml'].includes(ext)) {
+                const response = await fetch(fileUrl);
+                const text = await response.text();
+                viewerDiv.innerHTML = `<pre class="plain-text">${escapeHtml(text)}</pre>`;
+                return;
+            }
+            // 其他文件类型提供下载提示
+            viewerDiv.innerHTML = `
+                <div class="unsupported">
+                    ⚡ 文件类型 .${ext} 不支持在线预览<br/>
+                    <a href="${fileUrl}" target="_blank" rel="noopener noreferrer" style="margin-top:1rem; display:inline-block; background:#2563eb; color:white; padding:6px 16px; border-radius:40px; text-decoration:none;">📎 点击下载或新窗口打开</a>
+                </div>
+            `;
+        } catch (err) {
+            console.error(err);
+            showError(`加载文件失败: ${err.message}`);
+        }
+    }
+    
+    function showError(msg) {
+        const viewer = document.getElementById('doc-viewer');
+        viewer.innerHTML = `<div class="error-message">❌ ${escapeHtml(msg)}</div>`;
+    }
+    
+    // 初始化整个应用
+    async function init() {
+        if (!owner) {
+            document.getElementById('tree-container').innerHTML = '<div style="padding:1rem; background:#fee2e2; border-radius:12px;">⚠️ 无法自动识别 GitHub 仓库信息。请确保在 GitHub Pages 环境下使用，或手动配置 owner/repo。</div>';
+            return;
+        }
+        const treeContainer = document.getElementById('tree-container');
+        treeContainer.innerHTML = '<div class="loading">📂 正在扫描 documents 目录树...</div>';
+        try {
+            const treeData = await buildTree(DOCS_ROOT);
+            if (!treeData || treeData.length === 0) {
+                treeContainer.innerHTML = '<div>📂 未找到 documents 目录或目录为空，请确保仓库根目录下存在 documents 文件夹。</div>';
+                return;
+            }
+            // 存储树
+            window.treeRoot = treeData;
+            // 渲染树
+            treeContainer.innerHTML = '';
+            renderTree(treeData, treeContainer, 0);
+            // 扁平化用于快速查找
+            flatFileList = flattenTree(treeData);
+            if (flatFileList.length > 0) {
+                // 默认展示第一个文件
+                const firstFile = flatFileList[0];
+                // 需要找到原始树中的文件节点对象，通过path查找
+                const findNode = (nodes, targetPath) => {
+                    for (let n of nodes) {
+                        if (n.path === targetPath) return n;
+                        if (n.children) {
+                            const found = findNode(n.children, targetPath);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const fileNode = findNode(treeData, firstFile.path);
+                if (fileNode) loadAndRenderFile(fileNode);
+                else loadAndRenderFile(firstFile); // 后备
+            }
+        } catch (err) {
+            console.error(err);
+            treeContainer.innerHTML = `<div style="padding:1rem; color:#b91c1c;">❌ 加载失败: ${err.message}<br/>请确认仓库公开且 documents 目录存在，并且 GitHub API 可访问。</div>`;
+        }
+    }
+    
+    init();
+</script>
+</body>
+</html>
+```
