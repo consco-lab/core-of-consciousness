@@ -1,4 +1,4 @@
-# Core Of Consciousness
+# 意识核（Core Of Consciousness）
 
 从理论到实践：构建具备意识特征行为的系统——意识核
 
